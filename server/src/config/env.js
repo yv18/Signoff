@@ -75,14 +75,17 @@ const publicHost = (() => {
   }
 })();
 
-if (!publicHost) {
+// Object storage serves the images from its own public URL, so an unreachable
+// PUBLIC_URL doesn't matter then — only warn when the local driver is in use.
+if (!publicHost && process.env.STORAGE_DRIVER !== 's3') {
   console.warn(
     `\n⚠  PUBLIC_URL is ${PUBLIC_URL} — not reachable from the public internet.\n` +
     `   Signatures will look right in the editor but their images (the GIF and\n` +
     `   the social icons) will NOT load when pasted into Gmail or Outlook,\n` +
     `   because those clients fetch images through their own servers.\n` +
     `   Fix: point PUBLIC_URL at a public HTTPS host (a deploy, or a tunnel\n` +
-    `   like "cloudflared tunnel --url http://localhost:5000"), then re-render.\n`
+    `   like "cloudflared tunnel --url http://localhost:5000"), or set\n` +
+    `   STORAGE_DRIVER=s3 with a bucket, then re-render.\n`
   );
 }
 
