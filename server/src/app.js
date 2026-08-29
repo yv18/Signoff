@@ -20,9 +20,16 @@ export function createApp() {
     })
   );
 
+  const allowedOrigins = new Set(env.CLIENT_ORIGINS);
+  console.log('CORS: allowed origins =', [...allowedOrigins].join(', ') || '(none)');
   app.use(
     cors({
-      origin: env.CLIENT_ORIGIN.split(',').map((s) => s.trim()),
+      origin(origin, cb) {
+        // No Origin header: same-origin requests, curl, Railway health checks.
+        if (!origin || allowedOrigins.has(origin.replace(/\/+$/, ''))) return cb(null, true);
+        console.warn(`CORS: blocked origin ${origin} (not in CLIENT_ORIGIN)`);
+        return cb(null, false);
+      },
       credentials: true
     })
   );

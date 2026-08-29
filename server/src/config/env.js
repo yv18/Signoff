@@ -137,6 +137,13 @@ export const env = {
   LOOKUP_KEY: process.env.LOOKUP_KEY,
 
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+  // Same list, split and normalised for the CORS check: trailing slashes and
+  // stray whitespace are the usual reason a deployed frontend still gets
+  // "No 'Access-Control-Allow-Origin' header" despite CLIENT_ORIGIN being set.
+  CLIENT_ORIGINS: (process.env.CLIENT_ORIGIN || 'http://localhost:5173')
+    .split(',')
+    .map((s) => s.trim().replace(/\/+$/, ''))
+    .filter(Boolean),
   PUBLIC_URL,
   PUBLIC_URL_IS_REACHABLE: publicHost,
   // Can email clients actually fetch the signature images? True when object
