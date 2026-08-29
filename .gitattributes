@@ -1,0 +1,11 @@
+# Normalise line endings. Keep shell scripts LF so the Docker container's
+# /bin/sh shebang isn't broken by CRLF.
+* text=auto eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.woff binary
+*.woff2 binary

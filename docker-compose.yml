@@ -1,0 +1,56 @@
+# Signoff — full stack in three containers.
+#
+#   1. cp server/.env.example server/.env   (then: cd server && npm run keys, paste the values)
+#   2. docker compose up --build
+#   3. open http://localhost:8080
+#   4. one-time demo account:  docker compose exec server npm run seed
+#
+# The client (nginx) proxies /api and /static to the server, so everything is
+# same-origin on http://localhost:8080.
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+
+  server:
+    build: ./server
+    restart: unless-stopped
+    env_file:
+      - ./server/.env
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGO_URI: mongodb://mongo:27017/signoff
+      CLIENT_ORIGIN: http://localhost:8080
+      PUBLIC_URL: http://localhost:8080
+      COOKIE_SECURE: "false"
+      STORAGE_DRIVER: local
+      UPLOAD_DIR: uploads
+      # SMTP for OTP email. Left blank -> codes are logged and returned in the
+      # dev sign-up response. Fill these in (and in server/.env) for real email.
+      APP_NAME: Signoff
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_SECURE: "${SMTP_SECURE:-false}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      MAIL_FROM: "${MAIL_FROM:-no-reply@signoff.app}"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      - mongo
+
+  client:
+    build: ./client
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+
+volumes:
+  mongo-data:
+  uploads:

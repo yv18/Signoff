@@ -1,0 +1,41 @@
+node_modules
+.env
+uploads
+*.log
+
+
+# Environment variables — NEVER commit these
+.env
+.env.*
+!.env.example
+backend/.env
+
+# Dependencies
+node_modules/
+**/node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Build outputs
+build/
+dist/
+frontend/build/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime
+.DS_Store
+Thumbs.db
+*.zip
+
+# IDE
+.vscode/
+.idea/
+
+# Coverage
+coverage/
+
+.claude
