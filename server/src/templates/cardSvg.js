@@ -99,11 +99,35 @@ function iconPath(name, x, y, color, size = 13) {
   </g>`;
 }
 
-/** Blue verified badge (filled circle + white check) centred at x,y. */
-function verifiedBadge(x, y, r = 7) {
-  return `<g transform="translate(${x} ${y})">
-    <circle r="${r}" fill="#1D9BF0"/>
-    <path d="M ${-r * 0.42} ${r * 0.02} L ${-r * 0.08} ${r * 0.36} L ${r * 0.5} ${-r * 0.36}" fill="none" stroke="#ffffff" stroke-width="${(r * 0.3).toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>
+// Rough advance width of a bold Helvetica/Arial string in px. Server-side SVG
+// has no font metrics, so this is an estimate — accurate enough to seat the
+// verified badge just past the name instead of guessing from character count.
+const GLYPH_W = {
+  ' ': 0.28, '.': 0.28, ',': 0.28, "'": 0.24, '!': 0.33, ':': 0.3,
+  i: 0.28, j: 0.28, l: 0.28, I: 0.33, f: 0.33, t: 0.34, r: 0.43,
+  m: 0.86, w: 0.75, M: 0.86, W: 0.95
+};
+const textWidth = (str, fontSize) =>
+  [...String(str)].reduce((sum, ch) => {
+    const w =
+      GLYPH_W[ch] ??
+      (ch >= 'A' && ch <= 'Z' ? 0.68 : /[0-9]/.test(ch) ? 0.58 : 0.55);
+    return sum + w * fontSize;
+  }, 0);
+
+/**
+ * Verified badge — the Material "verified" scalloped mark, the same one the
+ * editor preview shows. Drawn as two solid fills (blue star + white tick), not
+ * a thin stroke, so it stays sharp through the GIF's 256-colour quantise and
+ * the mail-client downscale. (x, y) is the centre.
+ */
+function verifiedBadge(x, y, size = 16) {
+  const s = (size / 24).toFixed(4);
+  const ox = (x - size / 2).toFixed(2);
+  const oy = (y - size / 2).toFixed(2);
+  return `<g transform="translate(${ox} ${oy}) scale(${s})">
+    <path fill="#1D9BF0" d="M23 12l-2.44-2.79.34-3.69-3.61-.82-1.89-3.2L12 2.96 8.6 1.5 6.71 4.69 3.1 5.5l.34 3.7L1 12l2.44 2.79-.34 3.7 3.61.82 1.89 3.2L12 21.04l3.4 1.46 1.89-3.19 3.61-.82-.34-3.69L23 12z"/>
+    <path fill="#FFFFFF" d="M10.09 16.72l-3.8-3.81 1.48-1.48 2.32 2.33 5.85-5.87 1.48 1.48-7.33 7.32z"/>
   </g>`;
 }
 
@@ -218,14 +242,15 @@ export function buildCardSvg(data, opts = {}) {
   });
 
   // --- name --------------------------------------------------------------
-  const nameLen = (data.fullName || '').length;
   if (data.fullName) {
     const y = cursorY;
     if (glassy) {
       const words = esc(data.fullName).trim().split(/\s+/);
       const last = words.length > 1 ? words.pop() : '';
       const first = words.join(' ');
-      const tick = data.verified ? verifiedBadge(textX + nameLen * 12 + 14, y - 6) : '';
+      const tick = data.verified
+        ? verifiedBadge(textX + textWidth(data.fullName, 22) + 13, y - 8, 17)
+        : '';
       push(({ index, total }) =>
         wrapPart(
           `<text x="${textX}" y="${y + 2}" font-family="Helvetica,Arial,sans-serif" font-size="22" font-weight="700" fill="${th.fg}">${first}${last ? ' ' : ''}<tspan fill="${accent}">${last}</tspan></text>
@@ -244,7 +269,9 @@ export function buildCardSvg(data, opts = {}) {
       );
       cursorY += 21;
     } else {
-      const tick = data.verified ? verifiedBadge(textX + nameLen * 11.2 + 15, y - 6) : '';
+      const tick = data.verified
+        ? verifiedBadge(textX + textWidth(data.fullName, 20) + 12, y - 7, 16)
+        : '';
       push(({ index, total }) =>
         wrapPart(
           `<text x="${textX}" y="${y}" font-family="Helvetica,Arial,sans-serif" font-size="20" font-weight="700" fill="${th.fg}">${esc(data.fullName)}</text>${tick}`,

@@ -12,12 +12,19 @@ import { env } from '../config/env.js';
  * Email clients cannot run CSS or JavaScript, so the animation has to ship as
  * a raster image. Constraints that shape the numbers below:
  *   - Outlook on Windows shows frame 1 only, so frame 1 is the resting state.
+ *   - The GIF plays through once and stops on the finished signature (no loop).
  *   - Signatures are appended to every message, so keep the file small.
  */
 
+// Render at 2x the card's CSS size and let the email markup show it at 1x, so
+// it stays crisp on retina screens instead of looking like a soft upscaled GIF.
+const SCALE = 2;
+const OUT_WIDTH = CARD_WIDTH * SCALE;
+const OUT_HEIGHT = CARD_HEIGHT * SCALE;
+
 const FRAMES = 16;
 const DELAY_MS = 70;
-const HOLD_FRAMES = 6; // frames held on the finished state before looping
+const HOLD_FRAMES = 2; // a couple of frames resting on the finished state at the end
 
 async function toDataUri(url) {
   if (!url) return '';
@@ -44,8 +51,10 @@ async function toDataUri(url) {
 
 async function frameBuffer(data, progress, media) {
   const svg = buildCardSvg(data, { progress, ...media });
-  return sharp(Buffer.from(svg))
-    .resize(CARD_WIDTH, CARD_HEIGHT)
+  // density scales the SVG rasterisation itself (crisp), rather than upscaling
+  // a 1x bitmap after the fact (blurry).
+  return sharp(Buffer.from(svg), { density: 72 * SCALE })
+    .resize(OUT_WIDTH, OUT_HEIGHT)
     .flatten({ background: '#ffffff' }) // composite onto white, drop transparency
     .ensureAlpha() // gif-encoder-2's addFrame reads RGBA (4 bytes/px); a bare
     // .raw() RGB buffer makes it stride past the data — the frame shears and
@@ -67,11 +76,11 @@ export async function renderSignatureGif(signature) {
   // useOptimizer (4th arg) stays false: it makes gif-encoder-2 reuse an earlier
   // frame's neuquant palette for later "similar" frames, so the pale mid-
   // animation frames get quantised against the palette of the fully-opaque
-  // resting frame and wash out. Every frame is a full opaque 560x200 image, so
-  // there is nothing to gain from it anyway.
-  const encoder = new GIFEncoder(CARD_WIDTH, CARD_HEIGHT, 'neuquant', false);
+  // resting frame and wash out. Every frame is a full opaque image, so there is
+  // nothing to gain from it anyway.
+  const encoder = new GIFEncoder(OUT_WIDTH, OUT_HEIGHT, 'neuquant', false);
   encoder.setDelay(DELAY_MS);
-  encoder.setRepeat(0); // loop forever
+  encoder.setRepeat(-1); // play through once, then stop on the finished frame
   encoder.setQuality(10); // lower is better quality, larger file
   encoder.start();
 
@@ -85,6 +94,9 @@ export async function renderSignatureGif(signature) {
     encoder.addFrame(await frameBuffer(signature, progress, media));
   }
 
+  // Land on the finished signature and dwell there — this is the frame the GIF
+  // freezes on once it has played through.
+  encoder.setDelay(DELAY_MS * 8);
   for (let i = 0; i < HOLD_FRAMES; i += 1) encoder.addFrame(rest);
 
   encoder.finish();
@@ -104,7 +116,10 @@ export async function renderSignaturePng(signature) {
     logoDataUri: await toDataUri(signature.assets?.logoUrl)
   };
   const svg = buildCardSvg(signature, { progress: 1, ...media });
-  return sharp(Buffer.from(svg)).png().toBuffer();
+  return sharp(Buffer.from(svg), { density: 72 * SCALE })
+    .resize(OUT_WIDTH, OUT_HEIGHT)
+    .png()
+    .toBuffer();
 }
 
 export const RENDER_LIMITS = { FRAMES, DELAY_MS, MAX_BYTES: 300 * 1024, env: env.NODE_ENV };
