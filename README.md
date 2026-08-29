@@ -215,6 +215,31 @@ AWS leave `S3_ENDPOINT` blank, set a real `S3_REGION`, and
 `STORAGE_DRIVER=s3` and any of `S3_BUCKET` / `S3_ACCESS_KEY_ID` /
 `S3_SECRET_ACCESS_KEY` / `S3_PUBLIC_BASE_URL` missing.
 
+## Fonts on the render host
+
+The GIF renderer draws text through `sharp` → librsvg → **fontconfig**, which
+needs a config file *and* real font files. Minimal Linux images (including
+`node:20-slim` and the Nixpacks base) ship neither, so the first render logs:
+
+```
+Fontconfig error: Cannot load default config file: No such file: (null)
+```
+
+…and the text in the GIF comes out blank. Fixes are already in the repo:
+
+- **Docker** — `server/Dockerfile` installs `fontconfig fonts-liberation
+  fonts-dejavu-core` and sets `FONTCONFIG_PATH`.
+- **Railway / Nixpacks** — `server/nixpacks.toml` adds the same packages via
+  `aptPkgs`. (If Railway is building this service from the Dockerfile instead,
+  that path is covered too.)
+- **Any other Linux host** — install `fontconfig` and a font package
+  (`fonts-liberation` recommended — it is metric-compatible with the
+  Arial/Helvetica the templates request). `env.js` then auto-points
+  `FONTCONFIG_PATH` at `/etc/fonts`.
+
+Windows and macOS use the OS font system, not fontconfig, so local dev is
+unaffected. After deploying the fix, re-render existing signatures.
+
 ## Legal pages
 
 `/privacy`, `/terms`, and `/cookies` are served by `client/src/pages/Legal.jsx`.

@@ -1,0 +1,17 @@
+# Railway / Nixpacks build config (used when Railway builds this service with
+# Nixpacks rather than the Dockerfile).
+#
+# sharp rasterises the signature GIF's text through librsvg -> pango ->
+# fontconfig, which needs a config file AND real font files. The Nixpacks base
+# image ships neither — that is the "Fontconfig error: Cannot load default
+# config file: No such file: (null)" in the logs, and it leaves the text in the
+# rendered GIF blank. Liberation is metric-compatible with the Arial /
+# Helvetica the templates ask for, so the layout maths still line up. The apt
+# packages rebuild the font cache in their post-install scripts, so no manual
+# fc-cache step is needed.
+
+[phases.setup]
+aptPkgs = ["fontconfig", "fonts-liberation", "fonts-dejavu-core"]
+
+[variables]
+FONTCONFIG_PATH = "/etc/fonts"

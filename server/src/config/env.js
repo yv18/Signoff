@@ -1,5 +1,17 @@
+import fs from 'node:fs';
 import dotenv from 'dotenv';
 dotenv.config();
+
+// The GIF renderer (sharp -> librsvg -> fontconfig) needs to find a fonts.conf.
+// On minimal Linux hosts the default lookup fails with
+// "Fontconfig error: Cannot load default config file: No such file: (null)"
+// and the text in the render comes out blank. If fontconfig is installed the
+// config is at /etc/fonts; point at it when nothing else has. Harmless on
+// Windows/macOS (they don't use fontconfig) and when fonts still aren't
+// installed — that part is fixed in the Dockerfile / nixpacks.toml.
+if (!process.env.FONTCONFIG_PATH && !process.env.FONTCONFIG_FILE && fs.existsSync('/etc/fonts')) {
+  process.env.FONTCONFIG_PATH = '/etc/fonts';
+}
 
 const required = [
   'MONGO_URI',
