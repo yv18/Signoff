@@ -26,10 +26,10 @@ const href = (u) => {
   return /^https?:\/\//i.test(v) ? v : `https://${v}`;
 };
 
-// Display the card a little smaller than it is rendered (retina-ish) but at
-// its exact aspect ratio, so it never looks squashed.
-const DISPLAY_WIDTH = 468;
-const DISPLAY_HEIGHT = Math.round((CARD_HEIGHT / CARD_WIDTH) * DISPLAY_WIDTH);
+// Show the GIF at its native size, so a pasted signature and one added via
+// "insert image by URL" (which uses the file's own pixel size) look identical.
+const DISPLAY_WIDTH = CARD_WIDTH;
+const DISPLAY_HEIGHT = CARD_HEIGHT;
 
 export function buildEmailHtml(signature, { assetUrl, iconBase }) {
   // Meaningful alt text so a signature still reads as *something* when the image

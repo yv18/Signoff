@@ -16,11 +16,14 @@ import { env } from '../config/env.js';
  *   - Signatures are appended to every message, so keep the file small.
  */
 
-// Render at 2x the card's CSS size and let the email markup show it at 1x, so
-// it stays crisp on retina screens instead of looking like a soft upscaled GIF.
-const SCALE = 2;
-const OUT_WIDTH = CARD_WIDTH * SCALE;
-const OUT_HEIGHT = CARD_HEIGHT * SCALE;
+// The GIF ships at the card's native size (560x200). A bare image inserted into
+// a mail client — Gmail's "Insert image > by URL", for one — renders at its own
+// pixel size, so this IS the on-screen size; keep it sane. SUPERSAMPLE renders
+// each frame larger and downscales it, which antialiases the text and edges so
+// it still looks sharp at 1x.
+const SUPERSAMPLE = 2;
+const OUT_WIDTH = CARD_WIDTH;
+const OUT_HEIGHT = CARD_HEIGHT;
 
 const FRAMES = 16;
 const DELAY_MS = 70;
@@ -51,9 +54,10 @@ async function toDataUri(url) {
 
 async function frameBuffer(data, progress, media) {
   const svg = buildCardSvg(data, { progress, ...media });
-  // density scales the SVG rasterisation itself (crisp), rather than upscaling
-  // a 1x bitmap after the fact (blurry).
-  return sharp(Buffer.from(svg), { density: 72 * SCALE })
+  // Rasterise the SVG large (density), then let resize() downscale it to the
+  // output size — a supersampled, antialiased frame rather than one rendered
+  // straight at final size.
+  return sharp(Buffer.from(svg), { density: 72 * SUPERSAMPLE })
     .resize(OUT_WIDTH, OUT_HEIGHT)
     .flatten({ background: '#ffffff' }) // composite onto white, drop transparency
     .ensureAlpha() // gif-encoder-2's addFrame reads RGBA (4 bytes/px); a bare
@@ -116,7 +120,7 @@ export async function renderSignaturePng(signature) {
     logoDataUri: await toDataUri(signature.assets?.logoUrl)
   };
   const svg = buildCardSvg(signature, { progress: 1, ...media });
-  return sharp(Buffer.from(svg), { density: 72 * SCALE })
+  return sharp(Buffer.from(svg), { density: 72 * SUPERSAMPLE })
     .resize(OUT_WIDTH, OUT_HEIGHT)
     .png()
     .toBuffer();
