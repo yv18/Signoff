@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Box, Button, Stack, Typography, Avatar, IconButton } from '@mui/material';
-import { Link } from 'react-router-dom';
+import {
+  Box, Button, Stack, Typography, Avatar, IconButton,
+  Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+  Snackbar, Alert, CircularProgress
+} from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 import GlassCard from '../components/GlassCard.jsx';
 import SignaturePreview from '../components/SignaturePreview.jsx';
@@ -43,15 +48,33 @@ const STEPS = [
 ];
 
 export default function Landing() {
-  const { user } = useAuth();
+  const { user, deleteAccount, errorMessage } = useAuth();
+  const navigate = useNavigate();
   const [templateId, setTemplateId] = useState('mirra');
   const [animationId, setAnimationId] = useState('rise');
   const [replayKey, setReplayKey] = useState(0);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     const t = setInterval(() => setReplayKey((k) => k + 1), 6000);
     return () => clearInterval(t);
   }, []);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteAccount();
+      setConfirmOpen(false);
+      navigate('/', { replace: true });
+    } catch (e) {
+      setDeleteError(errorMessage(e, 'Could not delete your profile. Try again.'));
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const preview = { ...SAMPLE, templateId, animationId };
 
@@ -179,6 +202,77 @@ export default function Landing() {
         </Box>
       </Box>
 
+      {/* ---------------- danger zone (signed-in only) ---------------- */}
+      {user && (
+        <Box
+          component="section"
+          sx={{
+            mb: { xs: 6, md: 8 }, p: { xs: 2.6, md: 3.2 }, borderRadius: '14px',
+            border: '1px solid #F1C0C0', background: '#FEF6F6'
+          }}
+        >
+          <Stack
+            direction={{ xs: 'column', sm: 'row' }}
+            spacing={2}
+            alignItems={{ xs: 'flex-start', sm: 'center' }}
+            justifyContent="space-between"
+          >
+            <Box sx={{ maxWidth: '60ch' }}>
+              <Typography variant="h6" sx={{ fontSize: 17, mb: 0.6 }}>Delete profile</Typography>
+              <Typography sx={{ color: 'text.secondary', fontSize: 13.5, lineHeight: 1.6 }}>
+                Permanently removes your account, every signature, and all uploaded images. Hosted
+                signature GIFs stop loading. This cannot be undone.
+              </Typography>
+            </Box>
+            <Button
+              color="error"
+              variant="outlined"
+              startIcon={<DeleteOutlineIcon />}
+              onClick={() => { setDeleteError(''); setConfirmOpen(true); }}
+              sx={{ flexShrink: 0 }}
+            >
+              Delete profile
+            </Button>
+          </Stack>
+        </Box>
+      )}
+
+      <Dialog open={confirmOpen} onClose={() => !deleting && setConfirmOpen(false)}>
+        <DialogTitle>Delete your profile?</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ fontSize: 14 }}>
+            This deletes your account, {user?.email ? <strong>{user.email}</strong> : 'your account'},
+            along with every signature and uploaded image. Any signature already pasted into an email
+            client will stop showing its image. This cannot be undone.
+          </DialogContentText>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>{deleteError}</Alert>
+          )}
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button onClick={() => setConfirmOpen(false)} disabled={deleting}>Cancel</Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={handleDelete}
+            disabled={deleting}
+            startIcon={deleting ? <CircularProgress size={15} color="inherit" /> : <DeleteOutlineIcon />}
+          >
+            {deleting ? 'Deleting…' : 'Delete profile'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={Boolean(deleteError) && !confirmOpen}
+        autoHideDuration={4000}
+        onClose={() => setDeleteError('')}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity="error" variant="filled" onClose={() => setDeleteError('')}>
+          {deleteError}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

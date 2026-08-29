@@ -16,5 +16,6 @@ router.post('/refresh', ctrl.refresh);
 router.post('/logout', ctrl.logout);
 router.post('/logout-all', requireAuth, ctrl.logoutAll);
 router.get('/me', requireAuth, ctrl.me);
+router.delete('/me', requireAuth, ctrl.deleteAccount);
 
 export default router;

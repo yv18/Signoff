@@ -3,7 +3,9 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { User } from '../models/User.js';
 import { Signature } from '../models/Signature.js';
+import { RefreshToken } from '../models/RefreshToken.js';
 import { PendingRegistration } from '../models/PendingRegistration.js';
+import { keyFromUrl, remove as removeObject } from '../services/storage.service.js';
 import { hashLookup, sha256, safeEqual } from '../lib/crypto.js';
 import { enqueueMail } from '../lib/mailer.js';
 import { buildOtpEmail } from '../templates/otpEmail.js';
@@ -204,4 +206,31 @@ export const logoutAll = asyncRoute(async (req, res) => {
 
 export const me = asyncRoute(async (req, res) => {
   res.json({ user: req.user.toPublic() });
+});
+
+/**
+ * Delete the account and everything attached to it: signatures, rendered GIFs
+ * and uploaded images, refresh tokens, any half-finished sign-up. Irreversible.
+ */
+export const deleteAccount = asyncRoute(async (req, res) => {
+  const userId = req.user._id;
+  const sigs = await Signature.find({ userId });
+
+  // Best-effort blob cleanup — a missing object must not block the delete.
+  const keys = sigs.flatMap((sig) => {
+    const k = [keyFromUrl(sig.assets?.photoUrl), keyFromUrl(sig.assets?.logoUrl)];
+    for (let v = 1; v <= (sig.render?.version || 0); v += 1) {
+      k.push(`signatures/${sig._id}-v${v}.gif`);
+    }
+    return k.filter(Boolean);
+  });
+  await Promise.all(keys.map((k) => removeObject(k).catch(() => {})));
+
+  await Signature.deleteMany({ userId });
+  await RefreshToken.deleteMany({ userId });
+  await PendingRegistration.deleteMany({ emailHash: req.user.emailHash });
+  await User.deleteOne({ _id: userId });
+
+  res.clearCookie(env.COOKIE_NAME, { ...refreshCookieOptions(), maxAge: 0 });
+  res.json({ ok: true });
 });

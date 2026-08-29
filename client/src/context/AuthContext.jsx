@@ -56,9 +56,15 @@ export function AuthProvider({ children }) {
     try { await api.post('/auth/logout'); } finally { clear(); }
   }, [clear]);
 
+  // Irreversible: removes the account, its signatures, and uploaded images.
+  const deleteAccount = useCallback(async () => {
+    await api.delete('/auth/me');
+    clear();
+  }, [clear]);
+
   const value = useMemo(
-    () => ({ user, booting, registerStart, registerResend, registerVerify, login, logout, errorMessage }),
-    [user, booting, registerStart, registerResend, registerVerify, login, logout]
+    () => ({ user, booting, registerStart, registerResend, registerVerify, login, logout, deleteAccount, errorMessage }),
+    [user, booting, registerStart, registerResend, registerVerify, login, logout, deleteAccount]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

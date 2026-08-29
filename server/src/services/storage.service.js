@@ -39,12 +39,26 @@ async function ensureDir(dir) {
   await fs.mkdir(dir, { recursive: true });
 }
 
-/** The public URL a browser (or Gmail's image proxy) uses to fetch `key`. */
-export function publicUrl(key) {
-  const base = isS3
+/** The public base every stored object's URL is built from. */
+function publicBase() {
+  return isS3
     ? env.S3_PUBLIC_BASE_URL.replace(/\/+$/, '')
     : `${env.PUBLIC_URL.replace(/\/+$/, '')}/static`;
-  return `${base}/${key.replace(/^\/+/, '')}`;
+}
+
+/** The public URL a browser (or Gmail's image proxy) uses to fetch `key`. */
+export function publicUrl(key) {
+  return `${publicBase()}/${key.replace(/^\/+/, '')}`;
+}
+
+/**
+ * Turn a public URL we previously handed out back into its storage key, or ''
+ * if it isn't one of ours. Used to delete a user's blobs on account removal.
+ */
+export function keyFromUrl(url) {
+  const u = String(url || '');
+  const base = publicBase();
+  return u.startsWith(base) ? u.slice(base.length).replace(/^\/+/, '') : '';
 }
 
 export async function put(key, buffer, contentType = 'application/octet-stream') {
