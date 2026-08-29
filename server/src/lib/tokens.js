@@ -31,9 +31,15 @@ export async function issueRefreshToken(user, userAgent = '') {
   return raw;
 }
 
+// A token legitimately gets submitted twice within a moment — two browser
+// tabs, a mobile app resuming, a network retry, React re-mounting an effect.
+// Only a replay *after* this window looks like a stolen token worth burning
+// the whole session for.
+const REPLAY_GRACE_MS = 30_000;
+
 /**
  * Rotate a refresh token.
- * Returns { user, token } on success, or throws with a `code` we translate
+ * Returns { user, token } on success, or throws with a `status` we translate
  * into a 401 upstream.
  */
 export async function rotateRefreshToken(raw, userAgent = '') {
@@ -46,25 +52,36 @@ export async function rotateRefreshToken(raw, userAgent = '') {
     throw err;
   }
 
-  // Replay of an already-rotated token: assume theft, revoke the family.
-  if (existing.usedAt || existing.revokedAt) {
+  const burnFamily = async (message) => {
     await RefreshToken.updateMany(
       { family: existing.family, revokedAt: null },
       { $set: { revokedAt: new Date() } }
     );
-    const err = new Error('Session expired. Please sign in again.');
+    const err = new Error(message);
     err.status = 401;
     throw err;
+  };
+
+  // The family was already revoked (real theft detection fired, or a logout).
+  if (existing.revokedAt) {
+    await burnFamily('Session expired. Please sign in again.');
+  }
+
+  // Already rotated once. Inside the grace window this is a harmless
+  // double-submit — issue another child and move on. Outside it, treat it as
+  // a replayed token and burn the family.
+  if (existing.usedAt && Date.now() - existing.usedAt.getTime() > REPLAY_GRACE_MS) {
+    await burnFamily('Session expired. Please sign in again.');
   }
 
   if (existing.expiresAt < new Date()) {
-    const err = new Error('Session expired. Please sign in again.');
-    err.status = 401;
-    throw err;
+    await burnFamily('Session expired. Please sign in again.');
   }
 
-  existing.usedAt = new Date();
-  await existing.save();
+  if (!existing.usedAt) {
+    existing.usedAt = new Date();
+    await existing.save();
+  }
 
   const raw2 = randomToken();
   await RefreshToken.create({

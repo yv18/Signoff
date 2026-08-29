@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
-import { api, setAccessToken, setSessionLostHandler, errorMessage } from '../api/client.js';
+import { api, setAccessToken, setSessionLostHandler, refreshSession, errorMessage } from '../api/client.js';
 
 const AuthContext = createContext(null);
 
@@ -18,8 +18,7 @@ export function AuthProvider({ children }) {
     setSessionLostHandler(clear);
     (async () => {
       try {
-        const { data } = await api.post('/auth/refresh');
-        setAccessToken(data.accessToken);
+        const data = await refreshSession(); // shared in-flight — safe under StrictMode
         setUser(data.user);
       } catch {
         clear();

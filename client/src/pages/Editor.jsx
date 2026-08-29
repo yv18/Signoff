@@ -79,8 +79,11 @@ export default function Editor() {
     lastSaved.current = snapshot(next);
     try {
       const { data } = await api.put(`/signatures/${next.id}`, savableBody(next));
-      lastSaved.current = snapshot(data.signature);
-      setSig((cur) => ({ ...data.signature, assets: cur.assets }));
+      // The user may have typed more while this PUT was in flight. Keep the
+      // live local text and only adopt server-owned fields — echoing the whole
+      // response back would drop those newer keystrokes (the "it eats a
+      // letter" bug). Any real divergence re-triggers the autosave effect.
+      setSig((cur) => (cur ? { ...cur, render: data.signature.render } : cur));
       setHtml('');
     } catch (e) {
       setToast({ severity: 'error', message: errorMessage(e, 'Could not save.') });

@@ -28,7 +28,28 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+/**
+ * Trade the refresh cookie for a new access token. Refresh tokens rotate on
+ * every use, so two concurrent calls would make the second look like a
+ * replayed (stolen) token and burn the whole session. React StrictMode's
+ * double-mounted effects and several tabs both trigger that, so every caller
+ * shares one in-flight request.
+ */
 let refreshing = null;
+export function refreshSession() {
+  if (!refreshing) {
+    refreshing = api
+      .post('/auth/refresh')
+      .then((res) => {
+        setAccessToken(res.data.accessToken);
+        return res.data; // { user, accessToken }
+      })
+      .finally(() => {
+        refreshing = null;
+      });
+  }
+  return refreshing;
+}
 
 api.interceptors.response.use(
   (r) => r,
@@ -41,14 +62,10 @@ api.interceptors.response.use(
     if (status === 401 && !original._retried && !isRefreshCall) {
       original._retried = true;
       try {
-        refreshing = refreshing || api.post('/auth/refresh');
-        const { data } = await refreshing;
-        refreshing = null;
-        setAccessToken(data.accessToken);
+        const data = await refreshSession();
         original.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(original);
       } catch (e) {
-        refreshing = null;
         setAccessToken(null);
         onSessionLost();
         return Promise.reject(e);
