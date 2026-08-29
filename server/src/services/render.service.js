@@ -46,7 +46,10 @@ async function frameBuffer(data, progress, media) {
   const svg = buildCardSvg(data, { progress, ...media });
   return sharp(Buffer.from(svg))
     .resize(CARD_WIDTH, CARD_HEIGHT)
-    .flatten({ background: '#ffffff' })
+    .flatten({ background: '#ffffff' }) // composite onto white, drop transparency
+    .ensureAlpha() // gif-encoder-2's addFrame reads RGBA (4 bytes/px); a bare
+    // .raw() RGB buffer makes it stride past the data — the frame shears and
+    // tiles across, with a black band where it runs out of bytes.
     .raw()
     .toBuffer();
 }
@@ -61,7 +64,12 @@ export async function renderSignatureGif(signature) {
     logoDataUri: await toDataUri(signature.assets?.logoUrl)
   };
 
-  const encoder = new GIFEncoder(CARD_WIDTH, CARD_HEIGHT, 'neuquant', true);
+  // useOptimizer (4th arg) stays false: it makes gif-encoder-2 reuse an earlier
+  // frame's neuquant palette for later "similar" frames, so the pale mid-
+  // animation frames get quantised against the palette of the fully-opaque
+  // resting frame and wash out. Every frame is a full opaque 560x200 image, so
+  // there is nothing to gain from it anyway.
+  const encoder = new GIFEncoder(CARD_WIDTH, CARD_HEIGHT, 'neuquant', false);
   encoder.setDelay(DELAY_MS);
   encoder.setRepeat(0); // loop forever
   encoder.setQuality(10); // lower is better quality, larger file
