@@ -42,6 +42,15 @@ const SHARDS = [
 const initials = (n = '') =>
   n.trim().split(/\s+/).slice(0, 2).map((w) => w[0] || '').join('').toUpperCase() || 'S';
 
+// Accent values that mean "not chosen yet" — a real pick overrides a card
+// template's themed accent so it colours the whole signature.
+const NEUTRAL_ACCENTS = ['#0A0A0A', '#000000', '#6366F1'];
+const resolveAccent = (data, card, themeAccent) => {
+  const chosen = (data.accent || '').trim();
+  if (chosen && !NEUTRAL_ACCENTS.includes(chosen.toUpperCase())) return chosen;
+  return card ? themeAccent : chosen || themeAccent;
+};
+
 const href = (u) => (/^https?:\/\//i.test(u || '') ? u : `https://${u}`);
 
 /**
@@ -100,7 +109,7 @@ export default function SignaturePreview({ data, replayKey = 0 }) {
   const tpl = getTemplate(data.templateId);
   const card = isCardTemplate(data.templateId);
   const th = tpl.theme;
-  const accent = card ? th.accent : data.accent;
+  const accent = resolveAccent(data, card, th.accent);
   const glassy = Boolean(tpl.glass);
   const pixel = Boolean(tpl.pixel);
   const mirra = Boolean(tpl.mirra);

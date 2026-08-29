@@ -17,6 +17,11 @@ const esc = (s = '') =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c])
   );
 
+// Accent values that mean "user hasn't chosen a colour yet" — the black/indigo
+// the editor seeds a new signature with. Anything else is a deliberate pick and
+// overrides a card template's themed accent.
+const NEUTRAL_ACCENTS = new Set(['#0A0A0A', '#000000', '#6366F1']);
+
 const clamp = (n, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, n));
 const easeOut = (t) => 1 - Math.pow(1 - t, 3);
 const easeBack = (t) => {
@@ -148,7 +153,17 @@ export function buildCardSvg(data, opts = {}) {
     chip: '#F1F1F6',
     btnText: '#FFFFFF'
   };
-  const accent = tpl.style === 'card' ? th.accent : data.accent || th.accent;
+  // The accent picker applies to every template. A card template only falls
+  // back to its own themed accent while the user is still on a neutral default
+  // — so pick a colour in Style and it colours the name highlight, the rule and
+  // every contact icon, on any template.
+  const chosen = (data.accent || '').trim();
+  const accent =
+    chosen && !NEUTRAL_ACCENTS.has(chosen.toUpperCase())
+      ? chosen
+      : tpl.style === 'card'
+        ? th.accent
+        : chosen || th.accent;
   const anim = data.animationId || 'rise';
   const glassy = Boolean(tpl.glass);
   const mirra = Boolean(tpl.mirra);

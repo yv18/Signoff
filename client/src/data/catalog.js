@@ -23,7 +23,7 @@ export const TEMPLATES = [
   { id: 'football', name: 'Football',   description: 'Pitch green with white lines.',  preview: '/templates/football.svg',
     theme: { bgFrom: '#0B3B1E', bgTo: '#0F5A2E', fg: '#FFFFFF', sub: '#B7D8C2', line: '#1E7A44', accent: '#FFFFFF', chip: '#0E4A26', btnText: '#0B3B1E' } },
   { id: 'gov',      name: 'Government', description: 'Formal navy and gold.',          preview: '/templates/gov.svg',
-    theme: { bgFrom: '#0A1F3D', bgTo: '#0E2A52', fg: '#FFFFFF', sub: '#AEBBD0', line: '#22406E', accent: '#C9A227', chip: '#123159', btnText: '#0A1F3D' } },
+    theme: { bgFrom: '#0A1F3D', bgTo: '#0E2A52', fg: '#FFFFFF', sub: '#AEBBD0', line: '#22406E', accent: '#F0B429', chip: '#123159', btnText: '#0A1F3D' } },
   { id: 'minecraft', name: 'Minecraft', description: 'Grass-and-dirt block, pixel border, monospace name.', preview: '/templates/minecraft.svg', pixel: true,
     theme: { bgFrom: '#63A233', bgTo: '#75513A', fg: '#FFFFFF', sub: '#E7F0DA', line: '#31491C', accent: '#8BD34B', chip: '#3F6323', btnText: '#17240B' } },
   { id: 'mirra', name: 'Mirra', description: 'Clean card, social rail left, verified name, photo shatters in on the right.',
@@ -64,7 +64,14 @@ export const EMPTY_SIGNATURE = {
   website: '', location: '', tagline: '', ctaLabel: '', ctaUrl: '',
   social: { linkedin: '', x: '', instagram: '', youtube: '' },
   assets: { photoUrl: '', logoUrl: '' },
-  templateId: 'beside', animationId: 'rise', accent: '#0A0A0A', avatarShape: 'rounded', verified: false
+  templateId: 'beside', animationId: 'rise', accent: '#6366F1', avatarShape: 'rounded', verified: false
 };
 
-export const ACCENTS = ['#0A0A0A', '#3B4B66', '#E62429', '#FF9933', '#0F5A2E', '#C9A227'];
+// Vivid options so a signature reads as colourful. Picking any of these now
+// colours card templates too, not just the plain ones. (#6366F1 is deliberately
+// absent — it is the "untouched" sentinel, so a card template keeps its own
+// themed accent until a real colour is chosen here.)
+export const ACCENTS = [
+  '#2F7FE8', '#06B6D4', '#10B981', '#F0B429',
+  '#F97316', '#EF4444', '#EC4899', '#8B5CF6', '#3B4B66', '#0A0A0A'
+];

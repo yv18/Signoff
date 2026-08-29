@@ -52,7 +52,7 @@ export const TEMPLATES = [
   {
     id: 'gov', name: 'Government', description: 'Formal navy and gold.',
     style: 'card', preview: '/templates/gov.svg',
-    theme: { bgFrom: '#0A1F3D', bgTo: '#0E2A52', fg: '#FFFFFF', sub: '#AEBBD0', line: '#22406E', accent: '#C9A227', chip: '#123159', btnText: '#0A1F3D' }
+    theme: { bgFrom: '#0A1F3D', bgTo: '#0E2A52', fg: '#FFFFFF', sub: '#AEBBD0', line: '#22406E', accent: '#F0B429', chip: '#123159', btnText: '#0A1F3D' }
   },
   {
     id: 'minecraft', name: 'Minecraft', description: 'Grass-and-dirt block, pixel border, monospace name.',
