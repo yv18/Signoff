@@ -63,6 +63,18 @@ Uploaded photos and rendered GIFs persist in the `uploads` volume; Mongo data in
 plain HTTP — set it back to `true` and terminate TLS in front of the client for a
 real deployment.
 
+### Environment variables
+
+- **Server** — see `server/.env.example`. The five under `npm run keys` plus
+  `MONGO_URI` are required; the rest have working defaults. `SMTP_*` enable real
+  OTP email.
+- **Client** — see `client/.env.example`. **None are required.** The frontend
+  calls the API at the relative path `/api` (proxied by Vite in dev, by nginx in
+  Docker). The only optional var, `VITE_API_BASE_URL`, is for when the client
+  and API sit on different origins; it is baked in at build time, so pass it as
+  a Docker build arg (`docker compose build --build-arg VITE_API_BASE_URL=…` or
+  `VITE_API_BASE_URL=… docker compose up --build`).
+
 ### Demo account
 
 ```

@@ -12,8 +12,14 @@ export const setAccessToken = (t) => { accessToken = t; };
 export const getAccessToken = () => accessToken;
 export const setSessionLostHandler = (fn) => { onSessionLost = fn; };
 
+/**
+ * Same-origin by default: in dev, Vite proxies `/api`; in the Docker setup,
+ * nginx does. Set VITE_API_BASE_URL at build time only if the client and API
+ * are on different origins (e.g. signoff.app + api.signoff.app) — then the
+ * server also needs CLIENT_ORIGIN set for CORS + cookies.
+ */
 export const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   withCredentials: true
 });
 
