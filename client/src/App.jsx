@@ -26,6 +26,7 @@ export default function App() {
             <Route path="/login" element={<Auth mode="login" />} />
             <Route path="/register" element={<Auth mode="register" />} />
             <Route path="/editor" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
+            <Route path="/about" element={<Legal doc="about" />} />
             <Route path="/privacy" element={<Legal doc="privacy" />} />
             <Route path="/terms" element={<Legal doc="terms" />} />
             <Route path="/cookies" element={<Legal doc="cookies" />} />

@@ -2,10 +2,30 @@ import { Box, Typography, Stack } from '@mui/material';
 import GlassCard from '../components/GlassCard.jsx';
 import { tokens } from '../theme/theme.js';
 
-const UPDATED = '28 August 2026';
-const CONTACT = 'privacy@signoff.app';
+const UPDATED = '29 August 2026';
+const CONTACT = 'rajyashraj333@gmail.com';
 
 const DOCS = {
+  about: {
+    kind: 'Company',
+    dated: false,
+    title: 'About Signoff',
+    intro:
+      'Signoff is a small independent product that turns a handful of form fields into an animated email signature you can paste into Gmail, Outlook, or Apple Mail.',
+    sections: [
+      ['What it does', [
+        'You fill in your details, choose a template and an animation, and Signoff renders it on the server into a single hosted GIF plus paste-ready markup.',
+        'Every template and animation is free. There is no paid tier and nothing is held back.'
+      ]],
+      ['Who runs it', [
+        'Signoff is founded, built, and maintained by Yashraj Raj, Founder of Signoff.',
+        'It is run as an independent project, not on behalf of any other company.'
+      ]],
+      ['Contact', [
+        `Any inquiry — support, feedback, privacy requests, press, or partnership — goes to ${CONTACT}. We aim to reply within a few business days.`
+      ]]
+    ]
+  },
   privacy: {
     title: 'Privacy Policy',
     intro:
@@ -113,12 +133,14 @@ export default function Legal({ doc = 'privacy' }) {
 
   return (
     <Box sx={SHELL}>
-      <Typography variant="overline" sx={{ color: 'text.disabled' }}>Legal</Typography>
+      <Typography variant="overline" sx={{ color: 'text.disabled' }}>{d.kind || 'Legal'}</Typography>
       <Typography variant="h2" sx={{ fontSize: 'clamp(28px, 5vw, 40px)', my: 1.5 }}>
         {d.title}
       </Typography>
-      <Typography sx={{ color: 'text.secondary', fontSize: 15.5, lineHeight: 1.7, mb: 1 }}>{d.intro}</Typography>
-      <Typography sx={{ color: 'text.disabled', fontSize: 12.5, mb: 4 }}>Last updated {UPDATED}</Typography>
+      <Typography sx={{ color: 'text.secondary', fontSize: 15.5, lineHeight: 1.7, mb: d.dated === false ? 4 : 1 }}>{d.intro}</Typography>
+      {d.dated !== false && (
+        <Typography sx={{ color: 'text.disabled', fontSize: 12.5, mb: 4 }}>Last updated {UPDATED}</Typography>
+      )}
 
       <Stack spacing={3}>
         {d.sections.map(([heading, items]) => (
@@ -136,10 +158,11 @@ export default function Legal({ doc = 'privacy' }) {
       </Stack>
 
       <Box sx={{ mt: 4, p: 2.2, borderRadius: '10px', background: '#F6F6F7', border: `1px solid ${tokens.edge}` }}>
-        <Typography sx={{ fontSize: 12.5, color: 'text.disabled', lineHeight: 1.6 }}>
-          This document is a starting template for the Signoff project. Before relying on it in production,
-          have it reviewed against the laws that apply to you (for example GDPR, UK GDPR, or CCPA) and
-          replace the placeholder contact address ({CONTACT}) and company details with your own.
+        <Typography sx={{ fontSize: 13, color: 'text.secondary', lineHeight: 1.6 }}>
+          Questions about this page, or anything else? Email{' '}
+          <Box component="a" href={`mailto:${CONTACT}`} sx={{ color: 'text.primary', fontWeight: 600, textDecoration: 'none' }}>
+            {CONTACT}
+          </Box>.
         </Typography>
       </Box>
     </Box>

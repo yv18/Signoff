@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { tokens } from '../theme/theme.js';
 
 const links = [
+  ['About', '/about'],
   ['Privacy', '/privacy'],
   ['Terms', '/terms'],
   ['Cookies', '/cookies']
