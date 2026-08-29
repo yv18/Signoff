@@ -84,7 +84,10 @@ export async function renderSignatureGif(signature) {
   // nothing to gain from it anyway.
   const encoder = new GIFEncoder(OUT_WIDTH, OUT_HEIGHT, 'neuquant', false);
   encoder.setDelay(DELAY_MS);
-  encoder.setRepeat(-1); // play through once, then stop on the finished frame
+  // Netscape loop count 1 → browsers play the animation through twice (initial
+  // play + 1 repeat) and then hold on the last frame. setRepeat(0) would loop
+  // forever; setRepeat(-1) omits the extension and plays it just once.
+  encoder.setRepeat(1);
   encoder.setQuality(10); // lower is better quality, larger file
   encoder.start();
 
