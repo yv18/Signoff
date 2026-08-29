@@ -5,6 +5,7 @@ import {
 } from '@mui/material';
 import ReplayIcon from '@mui/icons-material/Replay';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import LinkIcon from '@mui/icons-material/Link';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import BusinessOutlinedIcon from '@mui/icons-material/BusinessOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -273,6 +274,21 @@ export default function Editor() {
     }
   };
 
+  /** Copy just the hosted GIF URL — for Gmail's "Insert image › by URL". */
+  const copyGifUrl = async () => {
+    const url = sig.render?.url;
+    if (!url) {
+      setToast({ severity: 'info', message: 'Render the GIF first, then copy its URL.' });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      setToast({ severity: 'success', message: 'Image URL copied' });
+    } catch {
+      setToast({ severity: 'error', message: 'Could not copy the URL.' });
+    }
+  };
+
   const previewData = useMemo(() => sig || EMPTY_SIGNATURE, [sig]);
 
   if (!sig) {
@@ -463,6 +479,18 @@ export default function Editor() {
               <Button variant="outlined" onClick={publish} disabled={publishing}>
                 {publishing ? 'Rendering…' : 'Render GIF'}
               </Button>
+              <Tooltip title="Copy the hosted GIF URL — for Gmail's Insert image › by URL">
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<LinkIcon sx={{ fontSize: 16 }} />}
+                    onClick={copyGifUrl}
+                    disabled={!sig.render?.url}
+                  >
+                    Copy URL
+                  </Button>
+                </span>
+              </Tooltip>
               <Button
                 variant="contained"
                 color="secondary"
@@ -528,14 +556,28 @@ export default function Editor() {
 
             <Stack direction="row" spacing={1.4} sx={{ mt: 1.8, p: 1.8, borderRadius: '10px', background: '#F6F6F7', border: `1px solid ${tokens.edge}` }}>
               <InfoOutlinedIcon sx={{ fontSize: 17, color: tokens.faint, mt: 0.2 }} />
-              <Typography sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.6 }}>
-                <strong>Desktop Gmail / Outlook:</strong> Copy, then paste straight into the signature box in
-                settings.{' '}
-                <strong>iPhone / iPad:</strong> the iOS Mail signature field won't download a hosted image —
-                email this signature to yourself, open it in the Mail app, select the message, copy, and paste
-                that into Settings&nbsp;→&nbsp;Mail&nbsp;→&nbsp;Signature. Copy here also carries a plain-text
-                version as a fallback.
-              </Typography>
+              <Stack spacing={1} sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.6 }}>
+                <Typography sx={{ fontSize: 'inherit', color: 'inherit', lineHeight: 'inherit' }}>
+                  <strong>Desktop Gmail / Outlook:</strong> use <strong>Copy</strong> and paste into the
+                  signature box in settings. If pasting misbehaves, use <strong>Copy URL</strong> instead
+                  and add it in Gmail with <em>Insert image&nbsp;›&nbsp;Web address (URL)</em>.
+                </Typography>
+                <Typography sx={{ fontSize: 'inherit', color: 'inherit', lineHeight: 'inherit' }}>
+                  <strong>iPhone / iPad:</strong> the iOS Mail signature field won't download a hosted image.
+                  Email this signature to yourself, open it in the Mail app, select the message, copy, then
+                  paste into Settings&nbsp;→&nbsp;Mail&nbsp;→&nbsp;Signature.
+                </Typography>
+                <Typography sx={{ fontSize: 'inherit', color: 'inherit', lineHeight: 'inherit' }}>
+                  <strong>Android:</strong> the Gmail app's mobile signature is text only — paste the
+                  plain-text version there (Gmail app → Settings → your account → Mobile signature). For the
+                  animated signature on new mail, set it in <strong>Gmail on the web</strong> (desktop, or a
+                  desktop-mode browser) using <strong>Copy URL</strong> + Insert image; it then applies to
+                  mail you send from the web.
+                </Typography>
+                <Typography sx={{ fontSize: 'inherit', color: 'text.disabled', lineHeight: 'inherit' }}>
+                  Copy also carries a plain-text version for any field that strips images.
+                </Typography>
+              </Stack>
             </Stack>
           </GlassCard>
         </Box>
