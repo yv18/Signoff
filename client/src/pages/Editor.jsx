@@ -22,6 +22,34 @@ import { tokens } from '../theme/theme.js';
 
 const FIELD_TABS = ['Details', 'Profiles', 'Style'];
 
+const withScheme = (u) => {
+  const v = String(u || '').trim();
+  if (!v) return '';
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+};
+
+/**
+ * A multi-line plain-text signature, for clients that strip HTML and remote
+ * images — chiefly iOS Mail's Settings → Signature field. Without this the
+ * clipboard's text/plain half was just the name, so a phone paste produced
+ * nothing usable.
+ */
+const buildSignatureText = (s) => {
+  const lines = [
+    s.fullName,
+    [s.role, s.company].filter(Boolean).join(' | '),
+    s.tagline,
+    s.email,
+    s.phone,
+    s.location,
+    withScheme(s.website)
+  ].filter(Boolean);
+  const socials = ['linkedin', 'x', 'instagram', 'youtube']
+    .map((k) => s.social?.[k] && withScheme(s.social[k]))
+    .filter(Boolean);
+  return [...lines, ...socials].join('\n');
+};
+
 /** The subset of a signature the autosave sends. Everything else is server-owned. */
 const savableBody = (s) => {
   const { assets, id, render, createdAt, updatedAt, ...body } = s;
@@ -143,6 +171,9 @@ export default function Editor() {
       setSig(data.signature);
       setHtml(data.html);
       setRenderWarning(data.warning || '');
+      // Warm the browser cache for the rendered GIF so the Copy button can put a
+      // decoded image on the clipboard without a visible wait.
+      if (data.signature.render?.url) new Image().src = data.signature.render.url;
       setToast({ severity: 'success', message: `Rendered — ${(data.bytes / 1024).toFixed(0)} KB` });
     } catch (e) {
       setToast({ severity: 'error', message: errorMessage(e, 'Render failed.') });
@@ -152,25 +183,93 @@ export default function Editor() {
   };
 
   /**
-   * Writes text/html to the clipboard so it pastes into Gmail as a formatted
-   * signature rather than as visible markup.
+   * Puts the signature on the clipboard so it pastes as a formatted block into
+   * an email signature box — not as visible markup.
+   *
+   * The trick that matters: we render the markup into a real element on the
+   * page and copy the *selection*, rather than writing a raw text/html string.
+   * Gmail's and Outlook's *signature settings* editors (stricter than the
+   * compose window) reliably accept a pasted selection but often drop a raw
+   * string; and on macOS / iOS the browser also puts the decoded image on the
+   * pasteboard, giving the GIF a chance of surviving into Apple Mail.
+   *
+   * A multi-line plain-text version rides along for clients that strip HTML and
+   * remote images entirely — most notably iOS Mail's Settings → Signature
+   * field, which would otherwise show just "Inline Image".
    */
   const copySignature = async () => {
     if (!html) {
       setToast({ severity: 'info', message: 'Render it first, then copy.' });
       return;
     }
+
+    const text = buildSignatureText(sig);
+
+    const holder = document.createElement('div');
+    holder.setAttribute('contenteditable', 'true');
+    holder.innerHTML = html;
+    Object.assign(holder.style, {
+      position: 'fixed', left: '-9999px', top: '0',
+      whiteSpace: 'normal', opacity: '0', pointerEvents: 'none'
+    });
+    document.body.appendChild(holder);
+
+    // Let the GIF (and social icons) decode so the copied selection carries the
+    // image rather than an empty box. Resolves to the serialized markup.
+    const htmlReady = Promise.all(
+      [...holder.querySelectorAll('img')].map((img) =>
+        img.complete
+          ? Promise.resolve()
+          : new Promise((res) => {
+              img.onload = img.onerror = res;
+              setTimeout(res, 4000);
+            })
+      )
+    ).then(() => new Blob([holder.innerHTML], { type: 'text/html' }));
+
+    let ok = false;
     try {
-      await navigator.clipboard.write([
-        new ClipboardItem({
-          'text/html': new Blob([html], { type: 'text/html' }),
-          'text/plain': new Blob([sig.fullName || ''], { type: 'text/plain' })
-        })
-      ]);
-      setToast({ severity: 'success', message: 'Copied — paste into Gmail or Outlook' });
+      if (navigator.clipboard?.write && window.ClipboardItem) {
+        // Promise-valued items keep the write tied to the click, so awaiting the
+        // images above doesn't trip the "clipboard needs a user gesture" guard.
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            'text/html': htmlReady,
+            'text/plain': new Blob([text], { type: 'text/plain' })
+          })
+        ]);
+        ok = true;
+      }
     } catch {
-      await navigator.clipboard.writeText(html);
-      setToast({ severity: 'success', message: 'Markup copied' });
+      /* older Safari / Firefox — fall back to a selection copy */
+    }
+
+    if (!ok) {
+      try {
+        await htmlReady;
+        const range = document.createRange();
+        range.selectNodeContents(holder);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        ok = document.execCommand('copy');
+        sel.removeAllRanges();
+      } catch {
+        ok = false;
+      }
+    }
+
+    document.body.removeChild(holder);
+
+    if (ok) {
+      setToast({ severity: 'success', message: 'Copied — paste into your email signature settings' });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      setToast({ severity: 'success', message: 'Copied as plain text' });
+    } catch {
+      setToast({ severity: 'error', message: 'Could not copy. Select the markup below and copy it by hand.' });
     }
   };
 
@@ -424,6 +523,18 @@ export default function Editor() {
               <Typography sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.6 }}>
                 Email clients cannot run CSS, so the animation ships as a hosted GIF. Outlook on Windows
                 shows the first frame only, which is why every preset starts and ends on the finished signature.
+              </Typography>
+            </Stack>
+
+            <Stack direction="row" spacing={1.4} sx={{ mt: 1.8, p: 1.8, borderRadius: '10px', background: '#F6F6F7', border: `1px solid ${tokens.edge}` }}>
+              <InfoOutlinedIcon sx={{ fontSize: 17, color: tokens.faint, mt: 0.2 }} />
+              <Typography sx={{ fontSize: 12.5, color: 'text.secondary', lineHeight: 1.6 }}>
+                <strong>Desktop Gmail / Outlook:</strong> Copy, then paste straight into the signature box in
+                settings.{' '}
+                <strong>iPhone / iPad:</strong> the iOS Mail signature field won't download a hosted image —
+                email this signature to yourself, open it in the Mail app, select the message, copy, and paste
+                that into Settings&nbsp;→&nbsp;Mail&nbsp;→&nbsp;Signature. Copy here also carries a plain-text
+                version as a fallback.
               </Typography>
             </Stack>
           </GlassCard>

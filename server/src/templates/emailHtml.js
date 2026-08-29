@@ -32,9 +32,16 @@ const DISPLAY_WIDTH = 468;
 const DISPLAY_HEIGHT = Math.round((CARD_HEIGHT / CARD_WIDTH) * DISPLAY_WIDTH);
 
 export function buildEmailHtml(signature, { assetUrl, iconBase }) {
+  // Meaningful alt text so a signature still reads as *something* when the image
+  // is blocked or stripped (image-blocking inboxes, iOS Mail's signature field).
+  const altText =
+    [signature.fullName, [signature.role, signature.company].filter(Boolean).join(', ')]
+      .filter(Boolean)
+      .join(' — ') || 'Email signature';
+
   const blocks = [
     `<tr><td style="padding:0;">
-      <img src="${esc(assetUrl)}" width="${DISPLAY_WIDTH}" height="${DISPLAY_HEIGHT}" alt="${esc(signature.fullName || 'Email signature')}" style="display:block;border:0;outline:none;text-decoration:none;width:${DISPLAY_WIDTH}px;height:${DISPLAY_HEIGHT}px;max-width:100%;">
+      <img src="${esc(assetUrl)}" width="${DISPLAY_WIDTH}" height="${DISPLAY_HEIGHT}" alt="${esc(altText)}" style="display:block;border:0;outline:none;text-decoration:none;width:${DISPLAY_WIDTH}px;height:${DISPLAY_HEIGHT}px;max-width:100%;">
     </td></tr>`
   ];
 

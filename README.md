@@ -76,6 +76,38 @@ real deployment.
   a Docker build arg (`docker compose build --build-arg VITE_API_BASE_URL=…` or
   `VITE_API_BASE_URL=… docker compose up --build`).
 
+### Client on Vercel + API on Railway
+
+The client and API are on different origins, so a few things must line up:
+
+**Vercel (client).** Set the project's *Root Directory* to `client`. `client/vercel.json`
+already sets the Vite build and — critically — rewrites every non-asset path to
+`index.html`, so a hard refresh or a shared link to `/editor`, `/login`, `/privacy`
+etc. resolves instead of 404-ing. Add one env var:
+
+```
+VITE_API_BASE_URL=https://<your-app>.up.railway.app/api
+```
+
+It is baked in at build time, so redeploy after changing it.
+
+**Railway (API).** Set:
+
+```
+NODE_ENV=production                       # makes the session cookie Secure + SameSite=None
+CLIENT_ORIGIN=https://<your-app>.vercel.app   # exact origin(s), comma-separated; no trailing slash
+PUBLIC_URL=https://<your-app>.up.railway.app  # where the GIF + icons are served from
+```
+
+Without `NODE_ENV=production` the refresh cookie is `SameSite=Lax` and the browser
+drops it on the cross-site call, so every reload bounces you back to sign-in.
+Without a matching `CLIENT_ORIGIN` the API rejects the request at CORS.
+
+**Image hosting.** Railway's filesystem is ephemeral — `STORAGE_DRIVER=local`
+loses every upload and render on redeploy. Use `STORAGE_DRIVER=s3` (see *Image
+hosting* below); then `PUBLIC_URL` only needs to be right for the icons, and the
+signature GIF is served from the bucket regardless.
+
 ### Demo account
 
 ```
