@@ -17,7 +17,7 @@ const SAMPLE = {
   fullName: 'Your Name',
   role: 'Job Title',
   company: 'Company Name',
-  email: 'yourname.lastname@gmail.com',
+  email: 'youremail@email.com',
   phone: '+1 (555) 012-3456',
   location: 'San Francisco, CA, USA',
   website: '',
@@ -97,16 +97,16 @@ export default function Landing() {
             <Box sx={{ p: 3 }}>
               <Stack direction="row" spacing={1.4} alignItems="center" sx={{ mb: 2.2 }}>
                 <Avatar sx={{ width: 34, height: 34, fontSize: 13, fontWeight: 700, color: '#fff', background: '#000000', borderRadius: '10px' }}>
-                  ED
+                  YR
                 </Avatar>
                 <Box>
-                  <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>Example Data</Typography>
+                  <Typography sx={{ fontSize: 13.5, fontWeight: 600 }}>Yashraj Raj</Typography>
                   <Typography sx={{ fontSize: 11.5, color: 'text.disabled' }}>Re: Proposal for the Q4 rollout</Typography>
                 </Box>
               </Stack>
 
               <Typography sx={{ fontSize: 14, color: 'text.secondary', lineHeight: 1.7, mb: 2.5 }}>
-                Thanks for sending this across. The timeline works on our side — I'll get the contract
+                Thanks for sending this across. The timeline works on our side. I'll get the contract
                 over to you by Thursday.
               </Typography>
 
