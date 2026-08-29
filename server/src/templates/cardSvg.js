@@ -302,7 +302,15 @@ export function buildCardSvg(data, opts = {}) {
   if (roleLine.length) {
     const y = cursorY;
     if (glassy) {
-      const text = roleLine.map(esc).join('  •  ').toUpperCase();
+      // dx gaps around the bullet — SVG collapses whitespace (even nbsp in
+      // librsvg), so spaces in the string would not survive.
+      const text = roleLine
+        .map((v, i) =>
+          i === 0
+            ? `<tspan>${esc(v).toUpperCase()}</tspan>`
+            : `<tspan dx="7">•</tspan><tspan dx="7">${esc(v).toUpperCase()}</tspan>`
+        )
+        .join('');
       push(({ index, total }) =>
         wrapPart(
           `<text x="${textX}" y="${y}" font-family="Helvetica,Arial,sans-serif" font-size="10" font-weight="700" letter-spacing="2.4" fill="${accent}">${text}</text>`,
@@ -315,7 +323,7 @@ export function buildCardSvg(data, opts = {}) {
         .map((v, i) =>
           i === 0
             ? `<tspan fill="${accent}" font-weight="600">${esc(v)}</tspan>`
-            : `<tspan fill="${th.sub}">  |  </tspan><tspan fill="${accent}" font-weight="600">${esc(v)}</tspan>`
+            : `<tspan fill="${th.sub}" dx="7">|</tspan><tspan fill="${accent}" font-weight="600" dx="7">${esc(v)}</tspan>`
         )
         .join('');
       push(({ index, total }) =>
@@ -333,7 +341,7 @@ export function buildCardSvg(data, opts = {}) {
     const y = cursorY;
     push(({ index, total }) =>
       wrapPart(
-        `<rect x="${textX}" y="${y}" width="230" height="1" fill="${accent}" opacity="0.45"/>`,
+        `<rect x="${textX}" y="${y}" width="${(mirra ? mediaX - 20 : CARD_WIDTH - 40) - textX}" height="1" fill="${accent}" opacity="0.45"/>`,
         { animationId: anim, progress, index, total, x: textX, y }
       )
     );
@@ -369,7 +377,7 @@ export function buildCardSvg(data, opts = {}) {
     push(({ index, total }) =>
       wrapPart(`${icon}${label}`, { animationId: anim, progress, index, total, x: textX, y })
     );
-    cursorY += glassy ? 19 : 17;
+    cursorY += glassy ? 19 : 18;
   });
 
   const total = parts.length;

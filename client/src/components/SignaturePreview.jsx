@@ -109,7 +109,9 @@ export default function SignaturePreview({ data, replayKey = 0 }) {
   const tpl = getTemplate(data.templateId);
   const card = isCardTemplate(data.templateId);
   const th = tpl.theme;
-  const accent = resolveAccent(data, card, th.accent);
+  // Plain templates (Beside / Stacked / Compact) have no theme object, so guard
+  // the access — reading th.accent unconditionally here blanked the whole editor.
+  const accent = resolveAccent(data, card, th?.accent);
   const glassy = Boolean(tpl.glass);
   const pixel = Boolean(tpl.pixel);
   const mirra = Boolean(tpl.mirra);
