@@ -3,6 +3,7 @@ import { Signature } from '../models/Signature.js';
 import { ApiError, asyncRoute } from '../middleware/error.js';
 import { TEMPLATES, ANIMATIONS } from '../templates/catalog.js';
 import { renderSignatureGif } from '../services/render.service.js';
+import { publicUrl } from '../services/storage.service.js';
 import { buildEmailHtml } from '../templates/emailHtml.js';
 import { env } from '../config/env.js';
 
@@ -91,14 +92,20 @@ export const publish = asyncRoute(async (req, res) => {
 
   const html = buildEmailHtml(plain, {
     assetUrl: url,
-    iconBase: `${env.PUBLIC_URL}/static/icons`
+    iconBase: publicUrl('icons')
   });
 
-  const warning = env.PUBLIC_URL_IS_REACHABLE
-    ? null
-    : `Images are hosted at ${env.PUBLIC_URL}, which email clients cannot reach. ` +
-      `The signature will show broken images in Gmail and Outlook until PUBLIC_URL ` +
-      `points at a public HTTPS host. Re-render after changing it.`;
+  let warning = null;
+  if (!env.ASSETS_REACHABLE) {
+    warning =
+      env.STORAGE_DRIVER === 's3'
+        ? `Object storage is enabled but S3_PUBLIC_BASE_URL is not set, so the ` +
+          `image URLs are incomplete. Set it and re-render.`
+        : `Images are hosted at ${env.PUBLIC_URL}, which email clients cannot reach. ` +
+          `The signature will show broken images in Gmail and Outlook until PUBLIC_URL ` +
+          `points at a public HTTPS host — or set STORAGE_DRIVER=s3 with a bucket. ` +
+          `Re-render after changing it.`;
+  }
 
   res.json({ signature: sig.toPublic(), html, bytes, warning });
 });

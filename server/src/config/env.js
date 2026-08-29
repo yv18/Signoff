@@ -33,6 +33,22 @@ if (hex32.length) {
   process.exit(1);
 }
 
+// When STORAGE_DRIVER=s3, the object-storage credentials and public base URL are
+// all mandatory — a half-configured driver would silently fall back to writing
+// unreachable local files. Fail fast with a list of what's missing.
+if (process.env.STORAGE_DRIVER === 's3') {
+  const need = ['S3_BUCKET', 'S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY', 'S3_PUBLIC_BASE_URL'];
+  const gaps = need.filter((k) => !process.env[k]);
+  if (gaps.length) {
+    console.error(
+      `\nSTORAGE_DRIVER=s3 but missing: ${gaps.join(', ')}\n` +
+      `Fill in the S3 block in server/.env (see .env.example), or set\n` +
+      `STORAGE_DRIVER=local to serve images from this box.\n`
+    );
+    process.exit(1);
+  }
+}
+
 const PUBLIC_URL = process.env.PUBLIC_URL || 'http://localhost:5000';
 
 /**
@@ -108,9 +124,30 @@ export const env = {
   CLIENT_ORIGIN: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
   PUBLIC_URL,
   PUBLIC_URL_IS_REACHABLE: publicHost,
+  // Can email clients actually fetch the signature images? True when object
+  // storage is configured (they're on a CDN) or PUBLIC_URL is a real host.
+  ASSETS_REACHABLE:
+    process.env.STORAGE_DRIVER === 's3'
+      ? Boolean(process.env.S3_PUBLIC_BASE_URL)
+      : publicHost,
 
   STORAGE_DRIVER: process.env.STORAGE_DRIVER || 'local',
   UPLOAD_DIR: process.env.UPLOAD_DIR || 'uploads',
+
+  // S3-compatible object storage (Cloudflare R2, AWS S3, Backblaze B2, Supabase,
+  // MinIO). Only read when STORAGE_DRIVER=s3. With this on, the rendered GIF and
+  // social icons live on a public CDN URL, so pasted signatures load in Gmail /
+  // Outlook no matter where — or whether — the API is deployed.
+  S3_ENDPOINT: process.env.S3_ENDPOINT || '',
+  S3_REGION: process.env.S3_REGION || 'auto',
+  S3_BUCKET: process.env.S3_BUCKET || '',
+  S3_ACCESS_KEY_ID: process.env.S3_ACCESS_KEY_ID || '',
+  S3_SECRET_ACCESS_KEY: process.env.S3_SECRET_ACCESS_KEY || '',
+  // The public base URL objects are served from (R2 r2.dev domain or a custom
+  // domain; an S3 bucket website / CloudFront URL). No trailing slash needed.
+  S3_PUBLIC_BASE_URL: process.env.S3_PUBLIC_BASE_URL || '',
+  // AWS S3 wants virtual-hosted-style; R2 / B2 / MinIO want path-style.
+  S3_FORCE_PATH_STYLE: process.env.S3_FORCE_PATH_STYLE !== 'false',
 
   // --- email / OTP -------------------------------------------------------
   APP_NAME: process.env.APP_NAME || 'Signoff',

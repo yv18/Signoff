@@ -67,7 +67,8 @@ real deployment.
 
 - **Server** — see `server/.env.example`. The five under `npm run keys` plus
   `MONGO_URI` are required; the rest have working defaults. `SMTP_*` enable real
-  OTP email.
+  OTP email; `STORAGE_DRIVER=s3` + `S3_*` put the signature images on a CDN (see
+  *Image hosting*).
 - **Client** — see `client/.env.example`. **None are required.** The frontend
   calls the API at the relative path `/api` (proxied by Vite in dev, by nginx in
   Docker). The only optional var, `VITE_API_BASE_URL`, is for when the client
@@ -168,6 +169,52 @@ response so sign-up still works end to end. Gmail/Outlook only send **as the
 authenticated mailbox**, so `env.js` falls back `MAIL_FROM` to `SMTP_USER` for
 those hosts (with a warning) if you point it at another domain.
 
+## Image hosting
+
+A signature is HTML plus images. Gmail and Outlook fetch those images through
+their own servers, so every `src` has to be a public HTTPS URL — `localhost`,
+a LAN address, or a private deploy all show broken images even though the
+editor preview looks fine.
+
+Two ways to satisfy that:
+
+| `STORAGE_DRIVER` | Where images live | Works when |
+|---|---|---|
+| `local` (default) | disk under `UPLOAD_DIR`, served at `PUBLIC_URL/static/…` | the API itself is on a public HTTPS host with persistent disk |
+| `s3` | S3-compatible object storage, served from `S3_PUBLIC_BASE_URL` | always — the URL is independent of where the API runs |
+
+If the client is on static hosting (Vercel, Netlify, GitHub Pages) and the API
+is elsewhere or not deployed at all, use `s3`.
+
+### Cloudflare R2 (recommended — no egress fees)
+
+1. **Create a bucket** in the Cloudflare dashboard → R2.
+2. **Make it public:** bucket → Settings → *Public access* → enable the
+   **`r2.dev`** subdomain (or attach a custom domain).
+3. **Create an API token:** R2 → *Manage API Tokens* → *Create* →
+   permission **Object Read & Write**, scoped to the bucket. Copy the
+   **Access Key ID** and **Secret Access Key**.
+4. Fill in `server/.env`:
+   ```
+   STORAGE_DRIVER=s3
+   S3_ENDPOINT=https://<accountid>.r2.cloudflarestorage.com
+   S3_REGION=auto
+   S3_BUCKET=<bucket-name>
+   S3_ACCESS_KEY_ID=<access-key-id>
+   S3_SECRET_ACCESS_KEY=<secret-access-key>
+   S3_PUBLIC_BASE_URL=https://<hash>.r2.dev        # or your custom domain
+   S3_FORCE_PATH_STYLE=true
+   ```
+5. **Upload the icons** to the new bucket: `npm run icons` (in `server/`).
+6. **Re-render** any existing signatures — open each in the editor and hit
+   *Copy for email* again so the markup picks up the new URLs.
+
+AWS S3, Backblaze B2, Supabase Storage and MinIO use the same variables — for
+AWS leave `S3_ENDPOINT` blank, set a real `S3_REGION`, and
+`S3_FORCE_PATH_STYLE=false`. The server refuses to start with
+`STORAGE_DRIVER=s3` and any of `S3_BUCKET` / `S3_ACCESS_KEY_ID` /
+`S3_SECRET_ACCESS_KEY` / `S3_PUBLIC_BASE_URL` missing.
+
 ## Legal pages
 
 `/privacy`, `/terms`, and `/cookies` are served by `client/src/pages/Legal.jsx`.
@@ -219,9 +266,11 @@ API call. Regenerate with `npm run previews` in `client/`.
 
 - **Everything is free.** There is no billing, plan, or paywall — all templates
   and animations are available to every account.
-- **Storage is local disk.** Set `STORAGE_DRIVER=s3` and fill in the S3 branch
-  of `storage.service.js`, then put a CDN in front. GIFs served from an app
-  server will not hold up.
+- **Image hosting.** With the default `STORAGE_DRIVER=local`, the rendered GIF
+  and social icons are served from `PUBLIC_URL`, so a pasted signature only
+  loads in Gmail / Outlook if the API is on a public HTTPS host. For a signature
+  that works regardless of where the API runs, set `STORAGE_DRIVER=s3` — see
+  *Image hosting* below.
 - **Email:** set `SMTP_*` for real OTP delivery (see *Sign-up with email OTP*).
   For horizontal scale, move the in-process mail queue and `publish`'s
   synchronous sharp render onto a BullMQ / Redis worker, and consider native

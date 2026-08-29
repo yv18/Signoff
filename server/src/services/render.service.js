@@ -22,16 +22,19 @@ const HOLD_FRAMES = 6; // frames held on the finished state before looping
 async function toDataUri(url) {
   if (!url) return '';
   try {
-    // Local static URL -> read from disk. Remote URLs are fetched.
+    let buf;
     const marker = '/static/';
-    if (url.includes(marker)) {
+    if (env.STORAGE_DRIVER === 'local' && url.includes(marker)) {
+      // Local driver: read straight off disk — skips a network round-trip and
+      // works before the HTTP server is even listening.
       const key = url.slice(url.indexOf(marker) + marker.length);
-      const buf = await fs.readFile(path.join(localRoot, key));
-      const out = await sharp(buf).resize(160, 160, { fit: 'inside' }).png().toBuffer();
-      return `data:image/png;base64,${out.toString('base64')}`;
+      buf = await fs.readFile(path.join(localRoot, key));
+    } else {
+      // S3 / remote: fetch it. The object is public, so a plain GET is enough.
+      const res = await fetch(url);
+      if (!res.ok) return '';
+      buf = Buffer.from(await res.arrayBuffer());
     }
-    const res = await fetch(url);
-    const buf = Buffer.from(await res.arrayBuffer());
     const out = await sharp(buf).resize(160, 160, { fit: 'inside' }).png().toBuffer();
     return `data:image/png;base64,${out.toString('base64')}`;
   } catch {
