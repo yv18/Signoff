@@ -4,6 +4,14 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://signoff-production-c2a8.up.railway.app/api/:path*"
+    },
+    {
+      "source": "/static/:path*",
+      "destination": "https://signoff-production-c2a8.up.railway.app/static/:path*"
+    },
     { "source": "/((?!api/|static/|assets/).*)", "destination": "/index.html" }
   ]
 }

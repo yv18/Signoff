@@ -91,8 +91,9 @@ export default function Landing() {
             Your last line<br />should move.
           </Typography>
           <Typography sx={{ color: 'text.secondary', fontSize: { xs: 15, md: 17.5 }, maxWidth: '46ch', lineHeight: 1.62 }}>
-            Build a signature that animates when your email opens. Add your photo, your company logo,
-            and the profiles you actually use. Paste it into Gmail or Outlook in about a minute.
+            Signoff is a free animated email signature generator. Add your photo, your company logo,
+            and the profiles you actually use, then paste the signature into Gmail or Outlook in
+            about a minute.
           </Typography>
 
           <Stack direction="row" spacing={1.5} sx={{ mt: 3.5 }} flexWrap="wrap" useFlexGap>

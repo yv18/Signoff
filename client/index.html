@@ -3,18 +3,103 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Signoff — animated email signatures</title>
-    <meta name="description" content="Build an animated email signature and paste it into Gmail or Outlook in about a minute. Free." />
+
+    <!-- Primary -->
+    <title>Signoff — Free Animated Email Signature Generator for Gmail &amp; Outlook</title>
+    <meta
+      name="description"
+      content="Make a free animated email signature for Gmail and Outlook in about a minute. Pick a template, add your photo, logo and links, and paste in a signature that actually moves."
+    />
+    <link rel="canonical" href="https://signoff-green.vercel.app/" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <meta name="application-name" content="Signoff" />
+    <meta name="author" content="Signoff" />
+    <meta name="keywords" content="animated email signature, email signature generator, gmail signature, outlook signature, free email signature maker, animated gif signature" />
     <meta name="theme-color" content="#000000" />
+
+    <!-- Icons / PWA -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Signoff" />
+    <meta property="og:title" content="Signoff — Free Animated Email Signature Generator" />
+    <meta
+      property="og:description"
+      content="Pick a template, add your details, and paste an animated email signature into Gmail or Outlook in about a minute. Free forever."
+    />
+    <meta property="og:url" content="https://signoff-green.vercel.app/" />
+    <meta property="og:image" content="https://signoff-green.vercel.app/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Signoff — an animated email signature shown inside an inbox" />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Signoff — Free Animated Email Signature Generator" />
+    <meta
+      name="twitter:description"
+      content="Pick a template, add your details, and paste an animated email signature into Gmail or Outlook in about a minute. Free forever."
+    />
+    <meta name="twitter:image" content="https://signoff-green.vercel.app/og-cover.png" />
+    <meta name="twitter:image:alt" content="Signoff — an animated email signature shown inside an inbox" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Structured data: helps Google show a rich result for the app -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://signoff-green.vercel.app/#website",
+            "url": "https://signoff-green.vercel.app/",
+            "name": "Signoff",
+            "description": "Free animated email signature generator for Gmail and Outlook.",
+            "inLanguage": "en"
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://signoff-green.vercel.app/#org",
+            "name": "Signoff",
+            "url": "https://signoff-green.vercel.app/",
+            "logo": "https://signoff-green.vercel.app/apple-touch-icon.png"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "Signoff",
+            "applicationCategory": "BusinessApplication",
+            "applicationSubCategory": "Email signature generator",
+            "operatingSystem": "Web",
+            "url": "https://signoff-green.vercel.app/",
+            "description": "Build an animated email signature, render it to a hosted GIF, and paste it into Gmail or Outlook in about a minute.",
+            "featureList": [
+              "Animated GIF email signatures",
+              "Ready-made templates",
+              "Photo and company logo upload",
+              "Works in Gmail and Outlook",
+              "Free, no account limits"
+            ],
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "publisher": { "@id": "https://signoff-green.vercel.app/#org" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
