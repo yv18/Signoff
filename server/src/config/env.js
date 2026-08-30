@@ -123,6 +123,46 @@ function mailFrom() {
   return configured;
 }
 
+/** Split `Name <a@b.com>` or a bare `a@b.com` into { name, email }. */
+function parseAddress(value, fallbackName) {
+  const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(value || '');
+  if (m) return { name: m[1].trim() || fallbackName, email: m[2].trim() };
+  return { name: fallbackName, email: (value || '').trim() };
+}
+
+/**
+ * Which transport delivers email.
+ *
+ *   brevo  – Brevo (ex-Sendinblue) HTTP API, over :443. Use this on any host
+ *            that blocks outbound SMTP ports — Railway, Render, Fly without a
+ *            dedicated IP, most PaaS. Symptom of a block: "Connection timeout"
+ *            on every send in the logs.
+ *   smtp   – pooled nodemailer on :587/:465. Fine locally and on hosts that
+ *            allow it.
+ *
+ * Defaults to brevo when BREVO_API_KEY is set, otherwise smtp.
+ */
+const MAIL_PROVIDER = (
+  process.env.MAIL_PROVIDER || (process.env.BREVO_API_KEY ? 'brevo' : 'smtp')
+).toLowerCase();
+
+const MAIL_FROM = mailFrom();
+const fromAddr = parseAddress(MAIL_FROM, process.env.APP_NAME || 'Signoff');
+
+// Real mail goes out when Brevo has a key, or SMTP has a host + user. Otherwise
+// codes are logged and returned in the dev sign-up response.
+const MAIL_ENABLED =
+  MAIL_PROVIDER === 'brevo'
+    ? Boolean(process.env.BREVO_API_KEY)
+    : Boolean(process.env.SMTP_HOST && process.env.SMTP_USER);
+
+if (MAIL_PROVIDER === 'brevo' && process.env.BREVO_API_KEY && !fromAddr.email) {
+  console.warn(
+    '\n⚠  MAIL_PROVIDER=brevo needs a sender address. Set MAIL_FROM to a Brevo\n' +
+    '   verified sender, e.g. MAIL_FROM="Signoff <you@gmail.com>".\n'
+  );
+}
+
 // --- refresh-cookie transport --------------------------------------------
 // Whether the cookie is marked Secure. On in production; force off with
 // COOKIE_SECURE=false for a plain-HTTP localhost / Docker demo.
@@ -210,15 +250,17 @@ export const env = {
 
   // --- email / OTP -------------------------------------------------------
   APP_NAME: process.env.APP_NAME || 'Signoff',
+  MAIL_PROVIDER, // 'brevo' | 'smtp'
+  BREVO_API_KEY: process.env.BREVO_API_KEY || '',
   SMTP_HOST: process.env.SMTP_HOST || '',
   SMTP_PORT: Number(process.env.SMTP_PORT || 587),
   SMTP_SECURE: process.env.SMTP_SECURE === 'true',
   SMTP_USER: process.env.SMTP_USER || '',
   SMTP_PASS: process.env.SMTP_PASS || '',
-  MAIL_FROM: mailFrom(),
-  // Real SMTP only when a host + user are set; otherwise codes are logged and
-  // returned in the dev response.
-  MAIL_ENABLED: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER),
+  MAIL_FROM,
+  MAIL_FROM_EMAIL: fromAddr.email,
+  MAIL_FROM_NAME: fromAddr.name,
+  MAIL_ENABLED,
 
   COOKIE_NAME: 'sg_rt',
   COOKIE_SECURE: cookieSecure,
