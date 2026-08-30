@@ -111,7 +111,8 @@ export function refreshCookieOptions() {
   return {
     httpOnly: true,
     secure: env.COOKIE_SECURE,
-    sameSite: env.COOKIE_SECURE ? 'none' : 'lax',
+    sameSite: env.COOKIE_SAMESITE,
+    ...(env.COOKIE_DOMAIN ? { domain: env.COOKIE_DOMAIN } : {}),
     path: '/api/auth',
     maxAge: env.REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000
   };

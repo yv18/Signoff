@@ -78,30 +78,41 @@ real deployment.
 
 ### Client on Vercel + API on Railway
 
-The client and API are on different origins, so a few things must line up:
+The browser must reach the client and the API on the **same origin**, or the
+`httpOnly` refresh cookie is a third-party cookie and Chrome / Safari / Firefox
+drop it — so every page reload bounces you back to sign-in. Don't point the
+client straight at the Railway URL; proxy through Vercel instead.
 
-**Vercel (client).** Set the project's *Root Directory* to `client`. `client/vercel.json`
-already sets the Vite build and — critically — rewrites every non-asset path to
-`index.html`, so a hard refresh or a shared link to `/editor`, `/login`, `/privacy`
-etc. resolves instead of 404-ing. Add one env var:
+**Vercel (client).** Set the project's *Root Directory* to `client`.
+`client/vercel.json` does two things:
 
-```
-VITE_API_BASE_URL=https://<your-app>.up.railway.app/api
-```
+- **rewrites `/api/*` and `/static/*` to the Railway API** — so the browser only
+  ever talks to `signoff-green.vercel.app`, the refresh cookie is first-party,
+  and there is no CORS in the browser at all. Edit the two `destination` URLs in
+  `vercel.json` to your Railway host.
+- rewrites every other non-asset path to `index.html`, so a hard refresh or a
+  shared link to `/editor`, `/login`, `/privacy` resolves instead of 404-ing.
 
-It is baked in at build time, so redeploy after changing it.
+**Do not set `VITE_API_BASE_URL`.** With it unset the client calls the relative
+`/api`, which the rewrite above proxies. Setting it makes the browser call
+Railway cross-site and reintroduces the logout-on-refresh bug.
 
 **Railway (API).** Set:
 
 ```
-NODE_ENV=production                       # makes the session cookie Secure + SameSite=None
-CLIENT_ORIGIN=https://<your-app>.vercel.app   # exact origin(s), comma-separated; no trailing slash
-PUBLIC_URL=https://<your-app>.up.railway.app  # where the GIF + icons are served from
+NODE_ENV=production                          # refresh cookie is Secure
+COOKIE_SAMESITE=lax                          # first-party cookie (client proxies /api)
+CLIENT_ORIGIN=https://<your-app>.vercel.app  # exact origin(s), comma-separated; no trailing slash
+PUBLIC_URL=https://<your-app>.vercel.app     # /static is proxied through Vercel now
 ```
 
-Without `NODE_ENV=production` the refresh cookie is `SameSite=Lax` and the browser
-drops it on the cross-site call, so every reload bounces you back to sign-in.
-Without a matching `CLIENT_ORIGIN` the API rejects the request at CORS.
+`COOKIE_SAMESITE=lax` is the key line: the old cross-site setup needed
+`SameSite=None`, which browsers now block as a third-party cookie. `CLIENT_ORIGIN`
+must still match for the server-to-server call Vercel makes.
+
+> Prefer real subdomains of one apex (`app.example.com` + `api.example.com`)?
+> Skip the proxy, keep `SameSite=Lax`, and set `COOKIE_DOMAIN=.example.com` on
+> the API so the session cookie is shared across both.
 
 **Image hosting.** Railway's filesystem is ephemeral — `STORAGE_DRIVER=local`
 loses every upload and render on redeploy. Use `STORAGE_DRIVER=s3` (see *Image

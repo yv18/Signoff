@@ -123,7 +123,44 @@ function mailFrom() {
   return configured;
 }
 
+// --- refresh-cookie transport --------------------------------------------
+// Whether the cookie is marked Secure. On in production; force off with
+// COOKIE_SECURE=false for a plain-HTTP localhost / Docker demo.
+const cookieSecure =
+  process.env.COOKIE_SECURE != null
+    ? process.env.COOKIE_SECURE === 'true'
+    : (process.env.NODE_ENV || 'development') === 'production';
+
+/**
+ * SameSite mode for the refresh cookie.
+ *
+ * A cross-site `SameSite=None` cookie is a THIRD-PARTY cookie, and Chrome,
+ * Safari and Firefox now block those by default — so a client on one domain
+ * talking to an API on another gets bounced to sign-in on every reload because
+ * the refresh cookie never comes back.
+ *
+ * The fix is to make the client reach the API on its OWN origin (a Vercel /
+ * nginx rewrite that proxies `/api` to the API) and then set this to `lax`, so
+ * the cookie is first-party. `strict` also works for the refresh call (it is a
+ * same-origin request). Leave unset and it follows the old behaviour: `none`
+ * when Secure, `lax` otherwise.
+ */
+const cookieSameSite =
+  ['lax', 'strict', 'none'].find((v) => v === (process.env.COOKIE_SAMESITE || '').toLowerCase()) ||
+  (cookieSecure ? 'none' : 'lax');
+
+// Browsers reject `SameSite=None` unless the cookie is also `Secure`.
+if (cookieSameSite === 'none' && !cookieSecure) {
+  console.warn(
+    '\n⚠  COOKIE_SAMESITE=none needs COOKIE_SECURE=true — browsers drop the\n' +
+    '   combination. Falling back to SameSite=Lax.\n'
+  );
+}
+
 export const env = {
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  PORT: Number(process.env.PORT || 5000),
+  MONGO_URI: process.env.MONGO_URI,
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number(process.env.PORT || 5000),
   MONGO_URI: process.env.MONGO_URI,
@@ -184,11 +221,11 @@ export const env = {
   MAIL_ENABLED: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER),
 
   COOKIE_NAME: 'sg_rt',
-  // Send the refresh cookie Secure + SameSite=None. Defaults to on in
-  // production; override with COOKIE_SECURE=false for a plain-HTTP demo.
-  COOKIE_SECURE:
-    process.env.COOKIE_SECURE != null
-      ? process.env.COOKIE_SECURE === 'true'
-      : (process.env.NODE_ENV || 'development') === 'production',
+  COOKIE_SECURE: cookieSecure,
+  // 'lax' | 'strict' | 'none' — see the note above cookieSameSite.
+  COOKIE_SAMESITE: cookieSameSite === 'none' && !cookieSecure ? 'lax' : cookieSameSite,
+  // Optional explicit cookie Domain, e.g. ".signoff.app" so a session started on
+  // app.signoff.app is also sent to api.signoff.app. Unset = host-only cookie.
+  COOKIE_DOMAIN: process.env.COOKIE_DOMAIN || undefined,
   isProd: (process.env.NODE_ENV || 'development') === 'production'
 };
