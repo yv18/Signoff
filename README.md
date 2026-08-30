@@ -66,9 +66,9 @@ real deployment.
 ### Environment variables
 
 - **Server** — see `server/.env.example`. The five under `npm run keys` plus
-  `MONGO_URI` are required; the rest have working defaults. `SMTP_*` enable real
-  OTP email; `STORAGE_DRIVER=s3` + `S3_*` put the signature images on a CDN (see
-  *Image hosting*).
+  `MONGO_URI` are required; the rest have working defaults. `BREVO_API_KEY` (or
+  `SMTP_*`) enables real OTP email; `STORAGE_DRIVER=s3` + `S3_*` put the
+  signature images on a CDN (see *Image hosting*).
 - **Client** — see `client/.env.example`. **None are required.** The frontend
   calls the API at the relative path `/api` (proxied by Vite in dev, by nginx in
   Docker). The only optional var, `VITE_API_BASE_URL`, is for when the client
@@ -193,8 +193,8 @@ accounts land on the marketing page, already signed in.
 Built to shrug off a flood of sign-ups:
 
 - the email is **queued, not awaited** — `start` returns 202 immediately;
-- one pooled SMTP transport, capped at 5 connections with nodemailer's own
-  per-second limiter, so a burst never opens thousands of sockets;
+- one transport (Brevo HTTP API or a pooled SMTP connection), capped at 5
+  concurrent sends, so a burst never opens thousands of sockets;
 - the in-process queue has a hard length cap — past it, `enqueueMail` throws a
   503 so the caller backs off instead of the process growing until OOM;
 - pending sign-ups live in Mongo with a TTL index, so abandoned flows can't pile
@@ -205,12 +205,24 @@ Built to shrug off a flood of sign-ups:
 For multiple instances, swap the in-process queue in `src/lib/mailer.js` for
 BullMQ on Redis — `enqueueMail` keeps the same signature.
 
-**SMTP config** (`server/.env`): set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`,
-`SMTP_PASS`, `SMTP_SECURE`, `MAIL_FROM`. Leave `SMTP_HOST` blank in local dev —
-the code is then logged to the server console and returned in the `start`
-response so sign-up still works end to end. Gmail/Outlook only send **as the
-authenticated mailbox**, so `env.js` falls back `MAIL_FROM` to `SMTP_USER` for
-those hosts (with a warning) if you point it at another domain.
+**Mail config** (`server/.env`) — pick one transport with `MAIL_PROVIDER`:
+
+- `brevo` *(recommended for any hosted deploy)* — set `BREVO_API_KEY` and
+  `MAIL_FROM`. Sends over Brevo's HTTPS API on port 443. **Railway, Render, Fly
+  (no dedicated IP) and most PaaS block outbound SMTP ports 25/465/587**, so
+  plain SMTP there fails with `Connection timeout` on every send and no code
+  arrives — this is the fix. Free tier is 300 emails/day. In Brevo: *Senders* →
+  add and verify your from-address (one click in your inbox, no DNS), then
+  *SMTP & API* → *API Keys* → create a v3 key. Auto-selected when
+  `BREVO_API_KEY` is set.
+- `smtp` — set `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`,
+  `SMTP_SECURE`, `MAIL_FROM`. Fine locally and on hosts that allow :587.
+  Gmail/Outlook only send **as the authenticated mailbox**, so `env.js` falls
+  back `MAIL_FROM` to `SMTP_USER` for those hosts (with a warning) if you point
+  it at another domain.
+
+Leave both unconfigured in local dev — the code is logged to the server console
+and returned in the `start` response, so sign-up still works end to end.
 
 ## Image hosting
 
@@ -339,7 +351,9 @@ API call. Regenerate with `npm run previews` in `client/`.
   loads in Gmail / Outlook if the API is on a public HTTPS host. For a signature
   that works regardless of where the API runs, set `STORAGE_DRIVER=s3` — see
   *Image hosting* below.
-- **Email:** set `SMTP_*` for real OTP delivery (see *Sign-up with email OTP*).
+- **Email:** set `MAIL_PROVIDER=brevo` + `BREVO_API_KEY` for real OTP delivery
+  on Railway/Render/Fly (they block SMTP ports); `SMTP_*` works elsewhere. See
+  *Sign-up with email OTP*.
   For horizontal scale, move the in-process mail queue and `publish`'s
   synchronous sharp render onto a BullMQ / Redis worker, and consider native
   `bcrypt` (threadpool) over `bcryptjs` for the sign-up hash under heavy load.
